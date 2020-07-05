@@ -72,6 +72,43 @@ def load_pre_handler(scene):
         bpy.ops.wm.sk_screencast_keys('INVOKE_REGION_WIN')
 
 
+@bpy.app.handlers.persistent
+def auto_restart_handler(scene):
+    context = bpy.context
+    wm = context.window_manager
+
+    if not ops.SK_OT_ScreencastKeys.is_running():
+        return
+    
+    need_restart = True
+    addrs = []
+    for window in wm.windows:
+        addr = window.as_pointer()
+        addrs.append(addr)
+        if addr in ops.SK_OT_ScreencastKeys.window_addr_store:
+            need_restart = False
+
+    if need_restart:
+        print("Restart Screencast Keys")
+        override_context = None
+        for window in context.window_manager.windows:
+            screen = window.screen
+            for area in screen.areas:
+                if area.type == 'VIEW_3D':
+                    for region in area.regions:
+                        if region.type == 'WINDOW':
+                            override_context = {
+                                'window': window,
+                                'screen': screen,
+                                'area': area,
+                                'region': region
+                            }
+        if override_context:
+            bpy.ops.wm.sk_screencast_keys(override_context, 'INVOKE_REGION_WIN')
+        else:
+            print("Could not find context for overriding")
+
+
 def register_updater(bl_info):
     config = utils.addon_updator.AddonUpdatorConfig()
     config.owner = "nutti"
@@ -107,7 +144,8 @@ def register():
     bpy.utils.register_class(preferences.DisplayEventTextAliasProperties)
     utils.bl_class_registry.BlClassRegistry.register()
     register_shortcut_key()
-    bpy.app.handlers.load_pre.append(load_pre_handler)
+    #bpy.app.handlers.load_pre.append(load_pre_handler)
+    bpy.app.handlers.depsgraph_update_pre.append(auto_restart_handler)
 
     # Apply preferences of the panel location.
     context = bpy.context
@@ -126,7 +164,8 @@ def register():
 
 
 def unregister():
-    bpy.app.handlers.load_pre.remove(load_pre_handler)
+    bpy.app.handlers.depsgraph_update_pre.remove(auto_restart_handler)
+    #bpy.app.handlers.load_pre.remove(load_pre_handler)
     unregister_shortcut_key()
     # TODO: Unregister by BlClassRegistry
     utils.bl_class_registry.BlClassRegistry.unregister()

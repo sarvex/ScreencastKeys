@@ -495,6 +495,9 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
     # TODO: We can check it with the valid of event handler.
     running = False
 
+    # Window struct pointers used for auto restart.
+    window_addr_store = []
+
     # Current mouse coordinate.
     current_mouse_co = [0.0, 0.0]
 
@@ -1325,6 +1328,8 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
     def invoke(self, context, event):
         cls = self.__class__
         prefs = compat.get_user_preferences(context).addons[__package__].preferences
+        window = context.window
+        window_addr = window.as_pointer()
 
         if cls.is_running():
             if compat.check_version(2, 80, 0) >= 0:
@@ -1341,8 +1346,12 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
             self.draw_regions_prev.clear()
             context.area.tag_redraw()
             cls.running = False
+            if window_addr in cls.window_addr_store:
+                cls.window_addr_store.remove(window_addr)
             return {'CANCELLED'}
         else:
+            if window_addr not in cls.window_addr_store:
+                cls.window_addr_store.append(window_addr)
             self.update_hold_modifier_keys(event)
             self.event_timer_add(context)
             context.window_manager.modal_handler_add(self)
