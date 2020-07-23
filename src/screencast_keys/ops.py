@@ -503,7 +503,14 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
 
     @classmethod
     def is_running(cls):
-        return cls.running
+        context = bpy.context
+        wm = context.window_manager
+        for window in wm.windows:
+            addr = window.as_pointer()
+            if addr in cls.window_addr_store:
+                return True
+        return False
+        #return cls.running
 
     @classmethod
     def sorted_modifier_keys(cls, modifiers):

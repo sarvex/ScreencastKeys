@@ -77,7 +77,14 @@ def auto_restart_handler(scene):
     context = bpy.context
     wm = context.window_manager
 
-    if not ops.SK_OT_ScreencastKeys.is_running():
+    if not context.window:
+        return
+    if not context.area:
+        return
+    if not context.region:
+        return
+
+    if wm.enable_screencast_keys:
         return
     
     need_restart = True
@@ -89,24 +96,36 @@ def auto_restart_handler(scene):
             need_restart = False
 
     if need_restart:
-        print("Restart Screencast Keys")
-        override_context = None
-        for window in context.window_manager.windows:
+        print("Try to Restart Screencast Keys")
+        override = {}
+        if not (context.screen and context.scene and
+                context.screen == window.screen and
+                context.scene == window.scene):
+            window = context.window
             screen = window.screen
-            for area in screen.areas:
-                if area.type == 'VIEW_3D':
-                    for region in area.regions:
-                        if region.type == 'WINDOW':
-                            override_context = {
-                                'window': window,
-                                'screen': screen,
-                                'area': area,
-                                'region': region
-                            }
-        if override_context:
-            bpy.ops.wm.sk_screencast_keys(override_context, 'INVOKE_REGION_WIN')
-        else:
-            print("Could not find context for overriding")
+            scene = window.scene
+            override = {
+                "window": window,
+                "screen": screen,
+                "scene": scene,
+                "area": None,
+                "region": None,
+            }
+
+        override_context = context.copy()
+        override_context.update(override)
+
+        op_context = 'INVOKE_DEFAULT'
+        args = [override_context, op_context]
+
+        print("Restarting Screencast Keys...")
+        from _bpy import ops as ops_module
+
+        op = getattr(getattr(bpy.ops, "wm"), "sk_screencast_keys")
+        BPyOpsSubModOp = op.__class__
+        op_call = ops_module.call
+        C_dict, C_exec, C_undo = BPyOpsSubModOp._parse_args(args)
+        ret = op_call(op.idname_py(), C_dict, {}, C_exec, C_undo)
 
 
 def register_updater(bl_info):
