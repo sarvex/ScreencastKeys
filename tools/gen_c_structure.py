@@ -42,26 +42,24 @@ def parse_struct_variables(code_body):
     lines = code_body.split("\n")
     variables = []
     for line in lines:
-        m = re.search(r"^\s*(enum\s+|struct\s+)*([a-zA-Z_][a-zA-Z0-9_]*)\s+"
-                      r"([a-zA-Z0-9_\[\],\s*]*?)(\s+DNA_DEPRECATED)*;", line)
-        if m:
-            var_names = m.group(3).split(",")
+        if m := re.search(
+            r"^\s*(enum\s+|struct\s+)*([a-zA-Z_][a-zA-Z0-9_]*)\s+"
+            r"([a-zA-Z0-9_\[\],\s*]*?)(\s+DNA_DEPRECATED)*;",
+            line,
+        ):
+            var_names = m[3].split(",")
             for name in var_names:
                 name = name.strip()
 
-                var = {}
-                var["is_pointer"] = name.startswith("*")
-                var["type"] = m.group(2)
+                var = {"is_pointer": name.startswith("*")}
+                var["type"] = m[2]
 
                 name = name[1:] if var["is_pointer"] else name
                 m2 = re.search(r"^([a-zA-Z0-9_]+)(\[([0-9]+)\])*$", name)
                 if not m2:
                     raise Exception(f"Unexpected line: {line}")
-                var["name"] = m2.group(1)
-                if m2.group(2):
-                    var["array_element_num"] = int(m2.group(3))
-                else:
-                    var["array_element_num"] = None
+                var["name"] = m2[1]
+                var["array_element_num"] = int(m2[3]) if m2[2] else None
                 variables.append(var)
 
     return variables
@@ -72,12 +70,10 @@ def parse_enum_items(code_body):
     items = []
     value = 0
     for line in lines:
-        m = re.search(r"^\s*([A-Z_]+)\s*(=*)\s*([0-9]*),", line)
-        if m:
-            item = {}
-            item["name"] = m.group(1)
-            if m.group(2) == "=":
-                item["value"] = int(m.group(3))
+        if m := re.search(r"^\s*([A-Z_]+)\s*(=*)\s*([0-9]*),", line):
+            item = {"name": m[1]}
+            if m[2] == "=":
+                item["value"] = int(m[3])
                 value = item["value"] + 1
             else:
                 item["value"] = value
@@ -112,18 +108,13 @@ def type_to_ctype(type_, is_pointer):
     )
 
     if type_ in known_struct:
-        if is_pointer:
-            return True, f"POINTER({type_})"
-        return True, type_
+        return (True, f"POINTER({type_})") if is_pointer else (True, type_)
     if type_ in known_enum:
         return False, "c_int8"
     if type_ in known_func:
         return False, "c_void_p"
     if type_ in builtin_types:
-        if is_pointer:
-            return True, f"c_{type_}_p"
-        return True, f"c_{type_}"
-
+        return (True, f"c_{type_}_p") if is_pointer else (True, f"c_{type_}")
     assert is_pointer
     return False, "c_void_p"
 
@@ -224,7 +215,7 @@ def parse_enum(target, source_file_path, enum_name):
 
 # pylint: disable=C0103
 def add_method_for_ListBase():
-    body = '''
+    return '''
     def remove(self, vlink):
         """Ref: BLI_remlink"""
 
@@ -288,12 +279,10 @@ def add_method_for_ListBase():
         if newlink.next:
             newlink.next.prev = gen_ptr(newlink)'''
 
-    return body
-
 
 # pylint: disable=C0103
 def add_variable_for_wmEventHandler():
-    variables = [
+    return [
         {
             "name": "op",
             "type": "wmOperator",
@@ -302,8 +291,6 @@ def add_variable_for_wmEventHandler():
         },
     ]
 
-    return variables
-
 
 def parse_argument():
     parser = argparse.ArgumentParser()
@@ -311,8 +298,7 @@ def parse_argument():
                         type=argparse.FileType("w"), default=sys.stdout)
     parser.add_argument("-t", "--target", nargs="?", type=str, default="main")
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():

@@ -22,9 +22,7 @@ def check_version(major, minor, _):
         return 0
     if bpy.app.version[0] > major:
         return 1
-    if bpy.app.version[1] > minor:
-        return 1
-    return -1
+    return 1 if bpy.app.version[1] > minor else -1
 
 
 def primitive_mode_is_line(mode):
@@ -170,11 +168,10 @@ def _get_shader(dims, prim_mode, has_texture, scissor_box):
             if scissor_box is not None:
                 return ShaderManager.get_shader(
                     'POLYLINE_UNIFORM_COLOR_SCISSOR')
-            else:
-                if is_shader_supported('3D_POLYLINE_UNIFORM_COLOR'):
-                    return gpu.shader.from_builtin('3D_POLYLINE_UNIFORM_COLOR')
-                raise NotImplementedError(
-                    "3D polyline is only supported for dims == 3")
+            if is_shader_supported('3D_POLYLINE_UNIFORM_COLOR'):
+                return gpu.shader.from_builtin('3D_POLYLINE_UNIFORM_COLOR')
+            raise NotImplementedError(
+                "3D polyline is only supported for dims == 3")
         raise NotImplementedError(f"dims == {dims} is not supported")
 
     if dims == 2:
@@ -226,9 +223,7 @@ def immEnd():
 
     # Setup batch.
     if prim_mode == GL_LINES:
-        indices = []
-        for i in range(0, len(coords), 2):
-            indices.append([i, i + 1])
+        indices = [[i, i + 1] for i in range(0, len(coords), 2)]
         batch = batch_for_shader(shader, 'LINES', data, indices=indices)
     elif prim_mode == GL_LINE_STRIP:
         batch = batch_for_shader(shader, 'LINE_STRIP', data)
@@ -236,14 +231,10 @@ def immEnd():
         data["pos"].append(data["pos"][0])
         batch = batch_for_shader(shader, 'LINE_STRIP', data)
     elif prim_mode == GL_TRIANGLES:
-        indices = []
-        for i in range(0, len(coords), 3):
-            indices.append([i, i + 1, i + 2])
+        indices = [[i, i + 1, i + 2] for i in range(0, len(coords), 3)]
         batch = batch_for_shader(shader, 'TRIS', data, indices=indices)
     elif prim_mode == GL_TRIANGLE_FAN:
-        indices = []
-        for i in range(1, len(coords) - 1):
-            indices.append([0, i, i + 1])
+        indices = [[0, i, i + 1] for i in range(1, len(coords) - 1)]
         batch = batch_for_shader(shader, 'TRIS', data, indices=indices)
     elif prim_mode == GL_QUADS:
         indices = []
@@ -268,17 +259,16 @@ def immEnd():
         if scissor_box is not None:
             shader.uniform_float("scissor", scissor_box)
             shader.uniform_int("lineSmooth", 1)
-    else:
-        if dims == 2:
-            if has_texture:
-                shader.uniform_sampler("image", inst.get_tex())
-            projection_matrix = gpu.matrix.get_projection_matrix()
-            model_view_matrix = gpu.matrix.get_model_view_matrix()
-            mvp_matrix = projection_matrix @ model_view_matrix
-            shader.uniform_float("ModelViewProjectionMatrix", mvp_matrix)
-            shader.uniform_float("color", color)
-            if scissor_box is not None:
-                shader.uniform_float("scissor", scissor_box)
+    elif dims == 2:
+        if has_texture:
+            shader.uniform_sampler("image", inst.get_tex())
+        projection_matrix = gpu.matrix.get_projection_matrix()
+        model_view_matrix = gpu.matrix.get_model_view_matrix()
+        mvp_matrix = projection_matrix @ model_view_matrix
+        shader.uniform_float("ModelViewProjectionMatrix", mvp_matrix)
+        shader.uniform_float("color", color)
+        if scissor_box is not None:
+            shader.uniform_float("scissor", scissor_box)
 
     # Draw.
     batch.draw(shader)

@@ -31,9 +31,7 @@ import datetime
 
 
 def get_separator():
-    if os.name == "nt":
-        return "\\"
-    return "/"
+    return "\\" if os.name == "nt" else "/"
 
 
 def _request(url, json_decode=True):
@@ -45,16 +43,15 @@ def _request(url, json_decode=True):
         with urllib.request.urlopen(req) as result:
             data = result.read()
     except urllib.error.HTTPError as e:
-        raise RuntimeError("HTTP error ({})".format(str(e.code))) from e
+        raise RuntimeError(f"HTTP error ({str(e.code)})") from e
     except urllib.error.URLError as e:
-        raise RuntimeError("URL error ({})".format(str(e.reason))) from e
+        raise RuntimeError(f"URL error ({str(e.reason)})") from e
 
     if json_decode:
         try:
             return json.JSONDecoder().decode(data.decode())
         except Exception as e:
-            raise RuntimeError("API response has invalid JSON format ({})"
-                               .format(str(e))) from e
+            raise RuntimeError(f"API response has invalid JSON format ({str(e)})") from e
 
     return data.decode()
 
@@ -63,9 +60,9 @@ def _download(url, path):
     try:
         urllib.request.urlretrieve(url, path)
     except urllib.error.HTTPError as e:
-        raise RuntimeError("HTTP error ({})".format(str(e.code))) from e
+        raise RuntimeError(f"HTTP error ({str(e.code)})") from e
     except urllib.error.URLError as e:
-        raise RuntimeError("URL error ({})".format(str(e.reason))) from e
+        raise RuntimeError(f"URL error ({str(e.reason)})") from e
 
 
 def _make_workspace_path(addon_dir):
@@ -79,8 +76,7 @@ def _make_workspace(addon_dir):
 
 def _make_temp_addon_path(addon_dir, url):
     filename = url.split("/")[-1]
-    filepath = _make_workspace_path(addon_dir) + get_separator() + filename
-    return filepath
+    return _make_workspace_path(addon_dir) + get_separator() + filename
 
 
 def _download_addon(addon_dir, url):
@@ -109,23 +105,17 @@ def _replace_addon(addon_dir, info, current_addon_path, offset_path=""):
     elif ext == ".py":
         shutil.move(tmp_addon_path, addon_dir)
     else:
-        raise RuntimeError("Unsupported file extension. (ext: {})".format(ext))
+        raise RuntimeError(f"Unsupported file extension. (ext: {ext})")
 
 
 def _get_all_releases_data(owner, repository):
-    url = "https://api.github.com/repos/{}/{}/releases"\
-          .format(owner, repository)
-    data = _request(url)
-
-    return data
+    url = f"https://api.github.com/repos/{owner}/{repository}/releases"
+    return _request(url)
 
 
 def _get_all_branches_data(owner, repository):
-    url = "https://api.github.com/repos/{}/{}/branches"\
-          .format(owner, repository)
-    data = _request(url)
-
-    return data
+    url = f"https://api.github.com/repos/{owner}/{repository}/branches"
+    return _request(url)
 
 
 def _parse_release_version(version):
@@ -147,10 +137,7 @@ def _compare_version(ver1, ver2):
 
         if v1[idx] > v2[idx]:
             return 1        # v1 > v2
-        if v1[idx] < v2[idx]:
-            return -1       # v1 < v2
-
-        return comp(v1, v2, idx + 1)
+        return -1 if v1[idx] < v2[idx] else comp(v1, v2, idx + 1)
 
     return comp(ver1, ver2, 0)
 
@@ -251,9 +238,7 @@ class AddonUpdaterManager:
                 if b["name"] in self.__config.branches:
                     info = UpdateCandidateInfo()
                     info.name = b["name"]
-                    info.url = "https://github.com/{}/{}/archive/{}.zip"\
-                               .format(self.__config.owner,
-                                       self.__config.repository, b["name"])
+                    info.url = f'https://github.com/{self.__config.owner}/{self.__config.repository}/archive/{b["name"]}.zip'
                     info.group = 'BRANCH'
                     self.__update_candidate.append(info)
 
@@ -269,11 +254,9 @@ class AddonUpdaterManager:
                     info.group = 'RELEASE'
                     self.__update_candidate.append(info)
         except RuntimeError as e:
-            self.__error = "Failed to check update {}. ({})"\
-                           .format(str(e), datetime.datetime.now())
+            self.__error = f"Failed to check update {str(e)}. ({datetime.datetime.now()})"
 
-        self.__info = "Checked update. ({})"\
-                      .format(datetime.datetime.now())
+        self.__info = f"Checked update. ({datetime.datetime.now()})"
 
         self.__candidate_checked = True
 
@@ -301,8 +284,7 @@ class AddonUpdaterManager:
             if info.name == version_name:
                 break
         else:
-            raise RuntimeError("{} is not found in update candidate"
-                               .format(version_name))
+            raise RuntimeError(f"{version_name} is not found in update candidate")
 
         if info is None:
             raise RuntimeError("Not found any update candidates")
@@ -322,20 +304,16 @@ class AddonUpdaterManager:
             # replace add-on
             offset_path = ""
             if info.group == 'BRANCH':
-                offset_path = "{}-{}{}{}".format(
-                    self.__config.repository, info.name, get_separator(),
-                    addon_path)
+                offset_path = f"{self.__config.repository}-{info.name}{get_separator()}{addon_path}"
             elif info.group == 'RELEASE':
                 offset_path = addon_path
             _replace_addon(self.__config.addon_directory,
                            info, self.__config.current_addon_path,
                            offset_path)
 
-            self.__info = "Updated to {}. ({})" \
-                          .format(info.name, datetime.datetime.now())
+            self.__info = f"Updated to {info.name}. ({datetime.datetime.now()})"
         except RuntimeError as e:
-            self.__error = "Failed to update {}. ({})"\
-                           .format(str(e), datetime.datetime.now())
+            self.__error = f"Failed to update {str(e)}. ({datetime.datetime.now()})"
 
         shutil.rmtree(_make_workspace_path(self.__config.addon_directory))
 

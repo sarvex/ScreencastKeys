@@ -31,14 +31,10 @@ class BlClassRegistry:
         if hasattr(cls, "bl_idname"):
             BlClassRegistry.add_class(cls.bl_idname, cls, self.legacy)
         elif not hasattr(cls, "bl_context"):
-            bl_idname = "{}{}{}".format(cls.bl_space_type,
-                                        cls.bl_region_type,
-                                        cls.bl_label)
+            bl_idname = f"{cls.bl_space_type}{cls.bl_region_type}{cls.bl_label}"
             BlClassRegistry.add_class(bl_idname, cls, self.legacy)
         else:
-            bl_idname = "{}{}{}{}".format(cls.bl_space_type,
-                                          cls.bl_region_type,
-                                          cls.bl_context, cls.bl_label)
+            bl_idname = f"{cls.bl_space_type}{cls.bl_region_type}{cls.bl_context}{cls.bl_label}"
             BlClassRegistry.add_class(bl_idname, cls, self.legacy)
         return cls
 
@@ -46,9 +42,8 @@ class BlClassRegistry:
     def add_class(cls, bl_idname, op_class, legacy):
         for class_ in cls.class_list:
             if (class_["bl_idname"] == bl_idname) and \
-               (class_["legacy"] == legacy):
-                raise RuntimeError("{} is already registered"
-                                   .format(bl_idname))
+                   (class_["legacy"] == legacy):
+                raise RuntimeError(f"{bl_idname} is already registered")
 
         new_op = {
             "bl_idname": bl_idname,

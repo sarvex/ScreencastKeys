@@ -31,7 +31,7 @@ class ListBase(Structure):
         """Ref: BLI_remlink"""
 
         link = vlink
-        if not vlink:
+        if not link:
             return
 
         if link.next:

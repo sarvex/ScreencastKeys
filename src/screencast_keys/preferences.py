@@ -718,9 +718,9 @@ class SK_Preferences(bpy.types.AddonPreferences):
                     col.enabled = True
                     ops = col.operator(
                         SK_OT_UpdateAddon.bl_idname,
-                        text="Update to the latest release version "
-                             "(version: {})".format(updater.latest_version()),
-                        icon='TRIA_DOWN_BAR')
+                        text=f"Update to the latest release version (version: {updater.latest_version()})",
+                        icon='TRIA_DOWN_BAR',
+                    )
                     ops.branch_name = updater.latest_version()
                 else:
                     col.enabled = False

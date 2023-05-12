@@ -94,10 +94,8 @@ def register_updater(info):
     config.min_release_version = info["version"]
     config.default_target_addon_path = "screencast_keys"
     config.target_addon_path = {
-        "master": "src{}screencast_keys".format(
-            utils.addon_updater.get_separator()),
-        "develop": "src{}screencast_keys".format(
-            utils.addon_updater.get_separator()),
+        "master": f"src{utils.addon_updater.get_separator()}screencast_keys",
+        "develop": f"src{utils.addon_updater.get_separator()}screencast_keys",
     }
     updater = utils.addon_updater.AddonUpdaterManager.get_instance()
     updater.init(config)
@@ -105,8 +103,7 @@ def register_updater(info):
 
 def register_shortcut_key():
     wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if kc:
+    if kc := wm.keyconfigs.addon:
         km = kc.keymaps.new(name="3D View", space_type='VIEW_3D')
         kmi = km.keymap_items.new("wm.sk_screencast_keys", 'C', 'PRESS',
                                   shift=True, alt=True)
